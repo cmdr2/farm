@@ -22,7 +22,7 @@ int BOOT_INDICATOR = 16;
 
 // timer config
 const uint64_t BOOT_DELAY = 10 * SECOND;
-const uint64_t WAKE_INTERVAL = 1 * HOUR;
+const uint64_t WAKE_INTERVAL = 4 * HOUR;
 const uint64_t PUMP_DURATION = 39 * SECOND;
 
 const uint64_t pollInterval = 1 * MINUTE;
