@@ -22,13 +22,16 @@ int BOOT_INDICATOR = 16;
 
 // timer config
 const uint64_t BOOT_DELAY = 10 * SECOND;
-const uint64_t WAKE_INTERVAL = 4 * HOUR;
-const uint64_t PUMP_DURATION = 39 * SECOND;
+const uint64_t WAKE_INTERVAL = 1 * HOUR;
+const uint64_t PUMP_DURATION = 40 * SECOND;
 
 const uint64_t pollInterval = 1 * MINUTE;
 
+const int NIGHT_SKIP_INTERVAL = 3; // run every Nth wake interval
+
 int rtcCounterAddress = 0;
 int counter = 0;
+int runIdx = 0;
 
 void runPump();
 bool connectToWiFi();
@@ -39,6 +42,8 @@ void setup() {
   Serial.begin(115200);
   pinMode(PUMP_PIN, OUTPUT);
   pinMode(BOOT_INDICATOR, OUTPUT);  // Initialize the LED_BUILTIN pin as an output
+
+  digitalWrite(PUMP_PIN, LOW);
 
   // delay the boot, to allow me to set things up once flashed
   digitalWrite(BOOT_INDICATOR, LOW);  // Turn the LED on (Note that LOW is the voltage level
@@ -137,23 +142,33 @@ void ping() {
 }
 
 void loop() {
-  Serial.printf("Counter: %d\n", counter);
+  Serial.printf("Counter: %d, runIdx: %d\n", counter, runIdx);
 
   int expectedCount = WAKE_INTERVAL / pollInterval;
   if (counter == 0 || counter >= expectedCount) {
     counter = 0;
 
-    Serial.println("Firing up..");
+    Serial.println("Waking up..");
 
-    // run the pump
-    runPump();
+    int lightValue = analogRead(A0);
+    bool isNight = (lightValue < 100);
+    Serial.printf("Is night: %d, Light value: %d\n", isNight, lightValue);
 
-    // send the analytics
-    if (connectToWiFi()) {
-      ping();
+    if (!isNight || runIdx == 0) {
+      Serial.println("Firing up..");
 
-      WiFi.disconnect(true);
+      // run the pump
+      runPump();
+
+      // send the analytics
+      if (connectToWiFi()) {
+        ping();
+
+        WiFi.disconnect(true);
+      }
     }
+
+    runIdx = (runIdx + 1) % NIGHT_SKIP_INTERVAL;
   }
 
   counter++;
